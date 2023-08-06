@@ -1,47 +1,34 @@
-from products.models import Product
-from products.serializers import ProductSerializer
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from django.http import JsonResponse
+from rest_framework.decorators import api_view
+from .pay import PayClass
 from rest_framework.response import Response
-from rest_framework import authentication,generics
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from django.shortcuts import get_object_or_404
 
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-@authentication_classes([authentication.SessionAuthentication])
-def product_alt_view(request, pk=None, *args, **kwargs):
-    method = request.method
-    if method == "GET":
-        if pk is not None:
-            obj = get_object_or_404(Product, pk=pk)
-            data = ProductSerializer(obj).data
-            return Response(data)
+@api_view(['POST'])
+def momo_pay(request):
+    amount = request.data.get("amount")
+    currency = request.data.get("currency")
+    txt_ref = request.data.get("txt_ref")
+    phone_number = request.data.get("phone_number")
+    payer_message = request.data.get("payer_message")
 
-        obj = Product.objects.all()
-        data = ProductSerializer(obj, many=True).data
+    response_data = PayClass.momopay(amount, currency, txt_ref, phone_number, payer_message)
+
+    return Response(response_data)
+
+@api_view(['GET'])
+def verify_momo_transaction(request, txn):
+    response_data = PayClass.verifymomo(txn)
+    return Response(response_data)
+
+@api_view(['GET'])
+def momo_balance(request):
+    response_data = PayClass.momobalance()
+    return Response(response_data)
+
+@api_view(['GET'])
+def get_basic_user_info(request, account_holder_msisdn):
+    try:
+        data = PayClass.get_basic_user_info(account_holder_msisdn)
         return Response(data)
-    elif method == "POST":
-        serializer = ProductSerializer(data=request.data)
-        if serializer.is_valid():
-            title = serializer.validated_data.get('title')
-            content = serializer.validated_data.get('content') or None
-            if content is None:
-                content = title
-            serializer.save(content=content)
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
-
-class ProductListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializer
-    authentication_classes = [authentication.SessionAuthentication]
-    permission_classes = [IsAuthenticated]
-    
-    def perform_create(self, serializer):
-            title = serializer.validated_data.get('title')
-            content = serializer.validated_data.get('content') or None
-            if content is None:
-                content = title
-            serializer.save(content=content)
-            
-product_list_create_view = ProductListCreateAPIView.as_view()
+    except ValueError as e:
+        return Response({"error": str(e)}, status=500)

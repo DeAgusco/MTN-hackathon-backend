@@ -9,10 +9,10 @@ class PayClass():
     # ================================================================================ Variables & Keys
 
     # Collections Subscription Key:
-    collections_subkey = ""
+    collections_subkey = "92f5c0ede8e143c1b91b093482f200da"
 
     # Disbursement subscription key
-    disbursements_subkey = ""
+    disbursements_subkey = "bddbeffef9b44de79849ab5fd4effa0e"
 
     # Production collections basic authorisation key(Leave it blank if in sandbox mode)
     basic_authorisation_collections = ""
@@ -87,21 +87,43 @@ class PayClass():
     #print("Api Key:"+api_key_collections)
 
     # ============= Action Functions for collections
+    @staticmethod
+    def get_basic_user_info(account_holder_msisdn):
+        url = f"{PayClass.accurl}/collection/v1_0/accountholder/msisdn/{account_holder_msisdn}/basicuserinfo"
+        headers = {
+            'Authorization': "Bearer " + str(PayClass.momotoken().get("access_token")),
+            'X-Target-Environment': PayClass.environment_mode,
+            'Ocp-Apim-Subscription-Key': PayClass.collections_subkey,
+        }
 
+        try:
+            response = requests.get(url, headers=headers)
+            data = response.json()
+            return data
+        except Exception as e:
+            # Handle error, raise an exception, or return an error response
+            error_message = f"Failed to fetch basic user information. Error: {str(e)}"
+            raise ValueError(error_message)
+   # Add 'staticmethod' decorator to make it a static method
+    @staticmethod
     def momotoken():
-        url = ""+str(PayClass.accurl)+"/collection/token/"
+        url = f"{PayClass.accurl}/collection/token/"
 
         payload = {}
         headers = {
             'Ocp-Apim-Subscription-Key': PayClass.collections_subkey,
             'Authorization': str(PayClass.basic_authorisation_collections)
         }
-
+        
         response = requests.request("POST", url, headers=headers, data=payload)
-
-        authorization_token = response.json()
-
-        return authorization_token
+        # Check if the response is successful
+        if response.status_code == 200:
+            authorization_token = response.json()
+            return authorization_token
+        else:
+            # Handle error, raise an exception, or return an error response
+            return response.json()
+            
 
     def momopay(amount, currency, txt_ref, phone_number, payermessage):
         # UUID V4 generator
@@ -157,12 +179,12 @@ class PayClass():
         payload = {}
         headers = {
             'Ocp-Apim-Subscription-Key': PayClass.collections_subkey,
-            'Authorization':  "Bearer "+str(PayClass.momotoken()["access_token"]),
+            'Authorization':  "Bearer "+str(PayClass.momotoken()['access_token']),
             'X-Target-Environment': PayClass.environment_mode,
         }
 
         response = requests.request("GET", url, headers=headers, data=payload)
-
+        
         json_respon = response.json()
 
         return json_respon
