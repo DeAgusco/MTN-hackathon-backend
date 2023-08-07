@@ -88,6 +88,96 @@ class PayClass():
 
     # ============= Action Functions for collections
     @staticmethod
+    def check_disbursement_status(reference_id):
+        url = f"{PayClass.accurl}/disbursement/v1_0/transfer/{reference_id}"
+        headers = {
+            'Authorization': "Bearer " + str(PayClass.momotokendisbursement().get("access_token")),
+            'X-Target-Environment': PayClass.environment_mode,
+            'Ocp-Apim-Subscription-Key': PayClass.disbursements_subkey,
+        }
+
+        try:
+            response = requests.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                return data
+            else:
+                # Handle error or return an error response
+                error_message = f"Failed to check disbursement status. Status Code: {response.status_code}, Response: {response.text}"
+                raise ValueError(error_message)
+        except Exception as e:
+            # Handle error or return an error response
+            error_message = f"Failed to check disbursement status. Error: {str(e)}"
+            raise ValueError(error_message)
+
+    @staticmethod
+    def request_to_transfer(amount, currency, txt_ref, phone_number):
+        uuidgen = str(uuid.uuid4())
+        url = ""+str(PayClass.accurl)+"/disbursement/v1_0/transfer"
+        headers = {
+            'Authorization': "Bearer " + str(PayClass.momotokendisbursement().get("access_token")),
+            'X-Reference-Id': uuidgen,
+            'X-Target-Environment': PayClass.environment_mode,
+            'Content-Type': 'application/json',
+            'Ocp-Apim-Subscription-Key': PayClass.disbursements_subkey,
+        }
+        payload = json.dumps({
+            "amount": amount,
+            "currency": currency,
+            "externalId": txt_ref,
+            "payee": {
+                "partyIdType": "MSISDN",
+                "partyId": phone_number
+            },
+            "payerMessage": "Disbursement from virtual wallet",
+            "payeeNote": "Disbursement from virtual wallet"
+        })
+
+        try:
+            response = requests.post(url, headers=headers, data=payload)
+            if response.status_code == 202:
+                data = response.status_code
+                return f"{data} and {uuidgen}"
+            else:
+                # Handle error or return an error response
+                error_message = f"Failed to initiate disbursement. Status Code: {response.status_code}, Response: {response.text}"
+                raise ValueError(error_message)
+        except Exception as e:
+            # Handle error or return an error response
+            error_message = f"Failed to initiate disbursement. Error: {str(e)}"
+            raise ValueError(error_message)
+    @staticmethod
+    def request_to_withdraw(amount, currency, txt_ref, phone_number):
+        uuidgen = str(uuid.uuid4())
+        url = ""+str(PayClass.accurl)+"/collection/v1_0/requesttowithdraw"
+        headers = {
+            'Authorization': "Bearer " + str(PayClass.momotoken().get("access_token")),
+            'X-Reference-Id': uuidgen,
+            'X-Target-Environment': PayClass.environment_mode,
+            'Content-Type': 'application/json',
+            'Ocp-Apim-Subscription-Key': PayClass.collections_subkey,
+        }
+        payload = json.dumps({
+            "amount": amount,
+            "currency": currency,
+            "externalId": txt_ref,
+            "payer": {
+                "partyIdType": "MSISDN",
+                "partyId": phone_number
+            },
+            "payerMessage": "Withdrawal from virtual wallet",  
+            "payeeNote": "Withdrawal from virtual wallet"  
+        })
+
+        try:
+            response = requests.post(url, headers=headers, data=payload)
+            d = response.status_code
+            return d
+        except Exception as e:
+            # Handle error, raise an exception, or return an error response
+            error_message = f"Failed to initiate withdrawal. Error: {str(e)}"
+            raise ValueError(error_message)
+    @staticmethod
     def get_basic_user_info(account_holder_msisdn):
         url = f"{PayClass.accurl}/collection/v1_0/accountholder/msisdn/{account_holder_msisdn}/basicuserinfo"
         headers = {
