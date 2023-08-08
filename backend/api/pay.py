@@ -137,7 +137,7 @@ class PayClass():
             response = requests.post(url, headers=headers, data=payload)
             if response.status_code == 202:
                 data = response.status_code
-                return f"{data} and {uuidgen}"
+                return {"status":data, "ref":uuidgen}
             else:
                 # Handle error or return an error response
                 error_message = f"Failed to initiate disbursement. Status Code: {response.status_code}, Response: {response.text}"
