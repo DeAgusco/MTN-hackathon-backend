@@ -15,3 +15,16 @@ class Transaction(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return f'{self.user.username}-wallet-with-balance: {self.transaction_type}'
+    
+
+
+class OfflineMessage(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='offline_messages')
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f'{self.message}-for-{self.recipient}-from-{self.sender}'
+    
+

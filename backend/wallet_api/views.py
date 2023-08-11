@@ -9,7 +9,47 @@ from .models import Wallet
 from .serializers import WalletSerializer,TransactionSerializer,WithdrawalSerializer,TransferSerializer
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from rest_framework.decorators import api_view
+from account.models import UserProfile
+from django.utils import timezone
+from django.contrib.auth.signals import user_logged_in
+from django.dispatch import receiver
+from channels.db import database_sync_to_async
+#Basic functions
+@receiver(user_logged_in)
+@database_sync_to_async
+def retrieve_offline_messages(sender, request, user, **kwargs):
+    offline_messages = OfflineMessage.objects.filter(recipient=user)
+    print("triggered")
+    channel_layer = get_channel_layer()
+
+    for message in offline_messages:
+        async_to_sync(channel_layer.group_send)(
+            f"user_{user.id}_group",
+            {
+                "type": "offline_message",
+                "message": message.message,
+                "timestamp": str(message.timestamp)
+            }
+        )
+        message.delete()
+
+def is_user_online(user_id):
+    user = User.objects.get(id=user_id)
+    user_profile, created = UserProfile.objects.get_or_create(user=user)
+    user_profile = UserProfile.objects.filter(user_id=user_id, is_online=True).first()
+    if user_profile:
+        return True
+    else:
+        return False
+    
+def send_offline_message(sender, recipient, message):
+    offline_message = OfflineMessage.objects.create(
+        sender=sender,
+        recipient=recipient,
+        message=message,
+        timestamp=timezone.now()
+    )
+
 
 class WalletDetailView(generics.RetrieveAPIView):
     serializer_class = WalletSerializer
@@ -128,15 +168,15 @@ class TransferFromWalletView(generics.CreateAPIView):
         
         # Extract data from serializer
         amount = serializer.validated_data['amount']
-        username = serializer.validated_data['reciever']
-        user = User.objects.get(username=username)
+        receiver_username = serializer.validated_data['reciever']
+        receiver = User.objects.get(username=receiver_username)
         sender_wallet = Wallet.objects.get(user=request.user)
         sender_wallet.balance -= int(amount)
         sender_wallet.save()
         # Create transaction record
         transaction = Transaction.objects.create(
             user=request.user,
-            transaction_type=f'Transfer to {username}',
+            transaction_type=f'Transfer to {receiver_username}',
             amount=amount
         )
         transaction.save()
@@ -149,10 +189,13 @@ class TransferFromWalletView(generics.CreateAPIView):
             {"type": "transaction.initiation"}
         )
         async_to_sync(receiver_channel_layer.group_send)(
-            f"user_{user.id}_group",
+            f"user_{receiver.id}_group",
             {"type": "transaction.initiation"}
         )
-        # ... (other logic)
+        if is_user_online(user_id=receiver.id):
+            pass
+        else:
+            send_offline_message(sender=request.user, recipient=receiver, message='Transaction initiated')
 
         return Response({"message": "Transfer initiated"})
     
@@ -185,6 +228,10 @@ class TransferFromWalletView(generics.CreateAPIView):
             f"user_{receiver.id}_group",
             {"type": "transaction.verification"}
         )
+        if is_user_online(user_id=receiver.id):
+            pass
+        else:
+            send_offline_message(sender=request.user, recipient=receiver, message='Transaction Verified')
         
     def send_reversal_notification(self, request):
         serializer = self.get_serializer(data=request.data)
@@ -215,6 +262,10 @@ class TransferFromWalletView(generics.CreateAPIView):
             f"user_{receiver.id}_group",
             {"type": "transaction.reversal"}
         )
+        if is_user_online(user_id=receiver.id):
+            pass
+        else:
+            send_offline_message(sender=request.user, recipient=receiver, message='Transaction Reversed')
         
 class VerificationView(TransferFromWalletView):
     

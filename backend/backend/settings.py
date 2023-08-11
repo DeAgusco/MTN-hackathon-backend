@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'wallet_api',
     'rest_framework.authtoken',
-    'channels'
+    'channels',
+    'account',
 ]
 
 MIDDLEWARE = [
@@ -54,7 +55,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    #"wallet_api.middleware.QueryAuthMiddleware",
 ]
 
 ROOT_URLCONF = "backend.urls"
