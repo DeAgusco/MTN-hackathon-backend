@@ -68,5 +68,6 @@ class TransactionConsumer(AsyncWebsocketConsumer):
         }))
         
     async def offline_message(self, event):
-        await self.send(text_data=json.dumps(event['message']))
+        await self.send(text_data=json.dumps({'message':event['message'],"type":"offline"}))
+
 

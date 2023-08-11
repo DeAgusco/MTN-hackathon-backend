@@ -11,28 +11,8 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from account.models import UserProfile
 from django.utils import timezone
-from django.contrib.auth.signals import user_logged_in
-from django.dispatch import receiver
-from channels.db import database_sync_to_async
+
 #Basic functions
-@receiver(user_logged_in)
-@database_sync_to_async
-def retrieve_offline_messages(sender, request, user, **kwargs):
-    offline_messages = OfflineMessage.objects.filter(recipient=user)
-    print("triggered")
-    channel_layer = get_channel_layer()
-
-    for message in offline_messages:
-        async_to_sync(channel_layer.group_send)(
-            f"user_{user.id}_group",
-            {
-                "type": "offline_message",
-                "message": message.message,
-                "timestamp": str(message.timestamp)
-            }
-        )
-        message.delete()
-
 def is_user_online(user_id):
     user = User.objects.get(id=user_id)
     user_profile, created = UserProfile.objects.get_or_create(user=user)
