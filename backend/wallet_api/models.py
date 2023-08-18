@@ -13,6 +13,7 @@ class Transaction(models.Model):
     transaction_type = models.CharField(max_length=20)  # 'deposit', 'withdraw', etc.
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     timestamp = models.DateTimeField(auto_now_add=True)
+    receiver = models.CharField(max_length=250, blank=True, null=True)
     def __str__(self):
         return f'{self.user.username}-wallet-with-balance: {self.transaction_type}'
     

@@ -30,7 +30,7 @@ def send_offline_message(sender, recipient, message):
         timestamp=timezone.now()
     )
 
-
+#Wallet details and Top-up
 class WalletDetailView(generics.RetrieveAPIView):
     serializer_class = WalletSerializer
     permission_classes = [IsAuthenticated]
@@ -136,6 +136,8 @@ class WithdrawalView(generics.CreateAPIView):
             return Response({"message": "Withdrawal successful"})
         else:
             return Response({"message": "Insufficient balance"},status=400)
+
+
 #Inter Wallet Transfer with real-time updates on both ends
 class TransferFromWalletView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
@@ -149,15 +151,24 @@ class TransferFromWalletView(generics.CreateAPIView):
         # Extract data from serializer
         amount = serializer.validated_data['amount']
         receiver_username = serializer.validated_data['reciever']
+        
+        #Get Sender's and receiver's wallet
         receiver = User.objects.get(username=receiver_username)
         sender_wallet = Wallet.objects.get(user=request.user)
+        #Some logic
+        if receiver.username == request.user.username:
+            return Response({"message":"sender and receiver cannot be equal"}, status=400)
+        else:
+            pass
+        #Take amount from sender's balance
         sender_wallet.balance -= int(amount)
         sender_wallet.save()
         # Create transaction record
         transaction = Transaction.objects.create(
             user=request.user,
             transaction_type=f'Transfer to {receiver_username}',
-            amount=amount
+            amount=amount,
+            receiver=receiver_username
         )
         transaction.save()
         # Notify sender and receiver about transaction initiation
@@ -179,17 +190,25 @@ class TransferFromWalletView(generics.CreateAPIView):
 
         return Response({"message": "Transfer initiated"})
     
-    def send_verification_notification(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+class VerificationView(APIView):
+    
+    def get(self, request, *args, **kwargs):
+        transaction = Transaction.objects.filter(user=request.user).last()
+        receiver = User.objects.get(username=transaction.receiver)
+        amount = transaction.amount
+        self.send_verification_notification(request, receiver, amount)
+        return Response({"message": "Verification notification sent"})
+    
+    def send_verification_notification(self, request, receiver, amount):
         
-        # Extract data from serializer
-        amount = serializer.validated_data['amount']
-        username = serializer.validated_data['reciever']
-        receiver = User.objects.get(username=username)
+        #Get receiver's wallet
         receiver_wallet, created = Wallet.objects.get_or_create(user=receiver)
+        
+        #Add Money to receiver's balance
         receiver_wallet.balance += int(amount)
         receiver_wallet.save()
+        
+        #Create transaction for receiver
         transaction = Transaction.objects.create(
             user=receiver,
             transaction_type=f'Money_Received',
@@ -208,29 +227,38 @@ class TransferFromWalletView(generics.CreateAPIView):
             f"user_{receiver.id}_group",
             {"type": "transaction.verification"}
         )
+        #Save User's message if offline
         if is_user_online(user_id=receiver.id):
             pass
         else:
             send_offline_message(sender=request.user, recipient=receiver, message='Transaction Verified')
+          
+class ReversalView(APIView):
+    
+    def get(self, request, *args, **kwargs):
+        transaction = Transaction.objects.filter(user=request.user).last()
+        receiver = User.objects.get(username=transaction.receiver)
+        amount = transaction.amount
+        self.send_reversal_notification(request, receiver, amount)
+        return Response({"message": "Reversal notification sent"})
+    
+    def send_reversal_notification(self, request, receiver, amount):
+       
+        #Get Sender's wallet
+        sender_wallet = Wallet.objects.get(user=request.user)
         
-    def send_reversal_notification(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        #Update Sender's wallet
+        sender_wallet.balance += int(amount)
+        sender_wallet.save()
         
-        # Extract data from serializer
-        amount = serializer.validated_data['amount']
-        username = serializer.validated_data['reciever']
-        receiver = User.objects.get(username=username)
-        receiver_wallet = Wallet.objects.get(user=request.user)
-        receiver_wallet.balance += int(amount)
-        receiver_wallet.save()
+        #Create record for sender
         transaction = Transaction.objects.create(
-            user=receiver,
+            user=request.user,
             transaction_type=f'Money_Reversed',
             amount=amount
         )
         transaction.save()
-        # Notify sender and receiver about transaction verification
+        # Notify sender and receiver about transaction reversal
         sender_channel_layer = get_channel_layer()
         receiver_channel_layer = get_channel_layer()
 
@@ -247,15 +275,4 @@ class TransferFromWalletView(generics.CreateAPIView):
         else:
             send_offline_message(sender=request.user, recipient=receiver, message='Transaction Reversed')
         
-class VerificationView(TransferFromWalletView):
-    
-    def create(self, request, *args, **kwargs):
-        self.send_verification_notification(request)
-        return Response({"message": "Verification notification sent"})
-    
-class ReversalView(TransferFromWalletView):
-    
-    def create(self, request):
-        self.send_reversal_notification(request)
-        return Response({"message": "Reversal notification sent"})
     

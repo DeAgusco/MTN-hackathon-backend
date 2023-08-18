@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'channels',
     'account',
+    'stripe_api',
 ]
 
 MIDDLEWARE = [
