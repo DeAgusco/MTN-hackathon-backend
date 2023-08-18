@@ -142,20 +142,35 @@ class TopUpCardView(generics.CreateAPIView):
         
         if serializer.is_valid():
             form_data = serializer.validated_data
-            top_up = stripe.Topup.create(
-                destination_balance='issuing',
-                amount=2000,
-                currency='usd',
-                description="Top-up for Issuing, August 18, 2023",
-                statement_descriptor='Top-up',
-            )
+            amount = form_data['amount']
+            currency = "EUR"
+            txt_ref = "Card top up"
+            phone_number = form_data['phone']
+            payer_message = "card top up"
+        
+            response_data = PayClass.momopay(amount, currency, txt_ref, phone_number, payer_message)
+            txn = response_data['ref']
+            response_data = PayClass.verifymomo(txn)
+            if response_data:
+                top_up = stripe.Topup.create(
+                    destination_balance='issuing',
+                    amount=amount,
+                    currency='usd',
+                    description="Top-up for Issuing, August 18, 2023",
+                    statement_descriptor='Top-up',
+                )
             
             # Retrieve the balance object
             balance = stripe.Balance.retrieve()
             
             # Extract the available Issuing balance in USD
             issuing_balance = next((bal for bal in balance.issuing.available if bal.currency == 'usd'), None)
-            
+            try:
+                card = Card.objects.get(user=request.user)
+                card.balance += int(amount)
+                card.save()
+            except:
+                return Response({"message":"User does not have a card"}, status=400)
             return Response({
                 'issuing_balance': issuing_balance.amount if issuing_balance else 0
             })
@@ -166,7 +181,10 @@ class GetCardDetailsView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [TokenAuthentication, SessionAuthentication]
     def get(self, request, format=None):
-        card = Card.objects.get(user=request.user)
-        serializer = CardSerializer(card)
-        return Response(serializer.data)
+        try:
+            card = Card.objects.get(user=request.user)
+            serializer = CardSerializer(card)
+            return Response(serializer.data)
+        except Card.DoesNotExist:
+            return Response({"message":"User does not have a card"},status=400)
 

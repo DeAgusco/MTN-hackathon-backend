@@ -9,5 +9,6 @@ class Card(models.Model):
     exp_month = models.CharField(max_length=2, blank=True, null=True)
     exp_year = models.CharField(max_length=2,blank=True, null=True)
     cvc = models.CharField(default=123, max_length=3)
+    balance = models.DecimalField(max_digits=50, default=0, decimal_places=2)
     def __str__(self):
         return f'{self.user.username}-has card {self.card_id}'

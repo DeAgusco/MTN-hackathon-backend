@@ -22,3 +22,4 @@ class StripeSerializer(serializers.Serializer):
     
 class TopupSerializer(serializers.Serializer):
     amount = serializers.CharField()
+    phone = serializers.CharField()

@@ -141,7 +141,7 @@ class PayClass():
             else:
                 # Handle error or return an error response
                 error_message = f"Failed to initiate disbursement. Status Code: {response.status_code}, Response: {response.text}"
-                return ValueError(error_message)
+                raise ValueError(error_message)
         except Exception as e:
             # Handle error or return an error response
             error_message = f"Failed to initiate disbursement. Error: {str(e)}"
