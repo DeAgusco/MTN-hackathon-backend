@@ -7,7 +7,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = ('username', 'password', 'email', 'first_name', 'mobile')
         extra_kwargs = {'password': {'write_only': True}}
-
+    
+    def create(self, validated_data):
+        password = validated_data.pop('password')  # Remove password from validated_data
+        user = User(**validated_data)
+        user.set_password(password)  # Hash the password
+        user.save()
+        return user
 
 class UserLoginSerializer(serializers.Serializer):
     username = serializers.CharField()
