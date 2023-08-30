@@ -22,4 +22,5 @@ urlpatterns = [
     path('api/',include('api.urls')),
     path('api/wallet/',include('wallet_api.urls')),
     path('api/stripe/',include('stripe_api.urls')),
+    path('api/account/',include('account.urls')),
 ]
