@@ -8,6 +8,7 @@
 - On Unix or MacOS, using the csh shell: `source /path/to/venv/bin/activate.csh`.
 - On Unix or MacOS, using the fish shell: `source /path/to/venv/bin/activate.fish`.
 - Run `pip install -r requirements.txt` to install all dependencies needed for this build.
+- move to the backend folder by running `cd backend` on windows and Mac
 - Run `python manage.py migrate` to activate the database.
 - Run `python manage.py runserver` to start the local server.
 - This build requires a redist server to run perfectly and send automatic notifications.
