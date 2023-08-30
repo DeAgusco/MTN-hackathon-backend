@@ -3,10 +3,10 @@ from rest_framework import generics, status
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from .serializers import UserRegistrationSerializer
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from .serializers import UserLoginSerializer
 from rest_framework.exceptions import AuthenticationFailed
@@ -51,3 +51,10 @@ class UserLoginView(generics.CreateAPIView):
         return Response({"message": "Login successful", "token": token.key}, status=status.HTTP_200_OK)
 
 
+
+class UserLogoutView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        logout(request)
+        return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
