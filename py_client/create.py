@@ -2,6 +2,7 @@ import requests
 
 endpoint = "http://localhost:8000/api/account/register/"
 data = {
+        "username":"sammy",
         "first_name":"Sammy",
         "password":"postgress",
         "mobile":"0599971083",

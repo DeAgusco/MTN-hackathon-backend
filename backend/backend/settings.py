@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-yqlz1mqj561%3x2v-u!ea83kfaibh@l#a%omr)965t=(1_re1*
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'wallet_api',
     'rest_framework.authtoken',
     'channels',
+    'corsheaders',
     'account',
     'stripe_api',
 ]
@@ -51,6 +52,7 @@ MIDDLEWARE = [
     
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -140,3 +142,5 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+CORS_ALLOW_ALL_ORIGINS = True
